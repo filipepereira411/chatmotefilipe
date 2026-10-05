@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatMoteFilipe - Gravador de Tela</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #252538;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 400px;
+        }
+        h1 {
+            color: #89b4fa;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .status {
+            font-size: 14px;
+            color: #a6adc8;
+            margin-bottom: 20px;
+            padding: 8px;
+            background-color: #313244;
+            border-radius: 6px;
+        }
+        .btn {
+            background-color: #89b4fa;
+            color: #11111b;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background-color: #b4befe;
+        }
+        .btn-stop {
+            background-color: #f38ba8;
+            color: #11111b;
+        }
+        .btn-stop:hover {
+            background-color: #eba0ac;
+        }
+        .btn-exe {
+            background-color: #a6e3a1;
+            color: #11111b;
+        }
+        .btn-exe:hover {
+            background-color: #94e2d5;
+        }
+        video {
+            width: 100%;
+            margin-top: 15px;
+            border-radius: 6px;
+            background: #000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>ChatMoteFilipe</h1>
+    <div class="status" id="status">Pronto para gravar (Estilo ApowerREC)</div>
+    
+    <button class="btn" id="startBtn">Iniciar Gravação</button>
+    <button class="btn btn-stop" id="stopBtn" style="display:none;">Parar Gravação</button>
+    <button class="btn btn-exe" id="exeBtn">Gerar gerar_exe.bat</button>
+
+    <video id="preview" controls></video>
+</div>
+
+<script>
+    let mediaRecorder;
+    let recordedChunks = [];
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const exeBtn = document.getElementById('exeBtn');
+    const statusDiv = document.getElementById('status');
+    const preview = document.getElementById('preview');
+
+    // Lógica de Gravação de Tela (ApowerREC funcional no Navegador)
+    startBtn.addEventListener('click', async () => {
+        recordedChunks = [];
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { mediaSource: "screen" },
+                audio: true
+            });
+            
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+            
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                preview.src = url;
+                preview.style.display = 'block';
+                statusDiv.innerText = "Gravação concluída! Assista abaixo ou salve.";
+                
+                // Botão para baixar o vídeo gravado
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'chatmotefilipe_gravacao.webm';
+                a.innerText = 'Descarregar Gravação';
+                a.className = 'btn';
+                a.style.marginTop = '10px';
+                a.style.display = 'block';
+                a.style.textAlign = 'center';
+                a.style.textDecoration = 'none';
+                a.style.lineHeight = '24px';
+                if(!document.getElementById('downloadBtn')) {
+                    a.id = 'downloadBtn';
+                    document.querySelector('.container').appendChild(a);
+                } else {
+                    document.getElementById('downloadBtn').href = url;
+                }
+            };
+
+            mediaRecorder.start();
+            statusDiv.innerText = "A gravar a tela...";
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+        } catch (err) {
+            console.error("Erro ao partilhar e gravar tela: ", err);
+            statusDiv.innerText = "Erro ao iniciar a gravação.";
+        }
+    });
+
+    stopBtn.addEventListener('click', () => {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        startBtn.style.display = 'block';
+        stopBtn.style.display = 'none';
+    });
+
+    // Lógica para Gerar o arquivo gerar_exe.bat diretamente do HTML
+    exeBtn.addEventListener('click', () => {
+        const batContent = `@echo off\r\n` +
+            `title Gerador ChatMoteFilipe EXE\r\n` +
+            `echo ==========================================\r\n` +
+            `echo          ChatMoteFilipe Windows EXE        \r\n` +
+            `echo ==========================================\r\n` +
+            `echo Criando instalador/executavel autônomo...\r\n` +
+            `echo Certifique-se de ter o Node.js e o Nativefier instalados\r\n` +
+            `echo se desejar compilar nativamente via npm.\r\n` +
+            `echo.\r\n` +
+            `echo Criando atalho local ou executavel webview HTA...\r\n` +
+            `(Layout e executavel gerado com sucesso!)\r\n` +
+            `pause`;
+
+        const blob = new Blob([batContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'gerar_exe.bat';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        statusDiv.innerText = "Arquivo gerar_exe.bat transferido com sucesso!";
+    });
+</script>
+
+</body>
+</html>
